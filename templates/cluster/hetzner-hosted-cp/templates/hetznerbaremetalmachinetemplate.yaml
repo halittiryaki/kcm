@@ -1,0 +1,62 @@
+{{- $root := . -}}
+{{- range $name, $np := $root.Values.nodepools }}
+{{- if $np.bootstrap }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: HetznerBareMetalMachineTemplate
+metadata:
+  name: {{ include "hetznermachinetemplate.worker.name" $root }}-{{ $name }}
+spec:
+  template:
+    spec:
+      installImage:
+        image:
+          {{- toYaml $np.bootstrap.image | nindent 10 }}
+        {{- if $np.bootstrap.swraid }}
+        swraid:
+          {{- toYaml $np.bootstrap.swraid | nindent 8 }}
+        {{- end }}
+        {{- if $np.bootstrap.partitions }}
+        partitions:
+          {{- toYaml $np.bootstrap.partitions | nindent 10 }}
+        {{- end }}
+        {{- if $np.bootstrap.logicalVolumeDefinitions }}
+        logicalVolumeDefinitions:
+          {{- toYaml $np.bootstrap.logicalVolumeDefinitions | nindent 8 }}
+        {{- end }}
+        {{- if $np.bootstrap.btrfsDefinitions }}
+        btrfsDefinitions:
+          {{- toYaml $np.bootstrap.btrfsDefinitions | nindent 8 }}
+        {{- end }}
+        {{- if $np.bootstrap.postInstallScript }}
+        postInstallScript: |-
+          {{- $np.bootstrap.postInstallScript | nindent 10 }}
+        {{- end }}
+      {{- if $np.hostSelector }}
+      hostSelector:
+        {{- toYaml $np.hostSelector | nindent 8 }}
+      {{- end }}
+      sshSpec:
+        portAfterInstallImage: {{ default 22 $np.ssh.portAfterInstallImage }}
+        secretRef:
+          name: {{ $root.Values.clusterIdentity.name }}
+          key:
+            name: robotRescueSshKeyName
+            privateKey: robotRescueSshPrivateKey
+            publicKey: robotRescueSshPublicKey
+---
+{{- if and $np.healthcheck $np.healthcheck.enabled }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: HetznerBareMetalRemediationTemplate
+metadata:
+  name: {{ include "cluster.name" $root }}-{{ $name }}-remediation
+spec:
+  template:
+    spec:
+      strategy:
+        retryLimit: {{ default (ternary 1 2 (ne $np.machineType nil)) $np.healthcheck.remediationStrategy.retryLimit }}
+        timeout: {{ quote (default "10m" $np.healthcheck.remediationStrategy.timeout) }}
+        type: {{ quote (default "Reboot" $np.healthcheck.remediationStrategy.type) }}
+---
+{{- end }}
+{{- end }}
+{{- end }}

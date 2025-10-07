@@ -1,0 +1,20 @@
+configSecret:
+  create: true
+  name: "hetzner-variables"
+  namespace: ""
+
+config:
+  hcloudToken: ""
+  hetznerRobotUser: ""
+  hetznerRobotPassword: ""
+  robotRescueSshKeyName: ""
+  robotRescueSshPrivateKey: ""
+  robotRescueSshPublicKey: ""
+
+manager: {}
+
+managerImage:
+  repository: ghcr.io/syself/caph
+  tag: 
+
+fetchConfigUrl: 

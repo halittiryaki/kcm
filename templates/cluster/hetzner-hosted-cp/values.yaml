@@ -1,0 +1,148 @@
+# Cluster parameters
+clusterIdentity: # @schema description: The Hetzner credentials secret reference, auto-populated; type: object
+  name: "" # @schema description: The Hetzner credentials secret name, auto-populated; type: string
+
+clusterNetwork: # @schema description: The cluster network configuration; type: object
+  apiServerPort: 6443 # @schema description: The port the API Server should bind to; type: number; minimum: 1; maximum: 65535
+  pods: # @schema description: The network ranges from which Pod networks are allocated; type: object
+    cidrBlocks: # @schema description: A list of CIDR blocks; type: array; items: string
+      - "10.244.0.0/16"
+  services: # @schema description: The network ranges from which service VIPs are allocated; type: object
+    cidrBlocks: # @schema description: A list of CIDR blocks; type: array; items: string
+      - "10.96.0.0/12"
+
+clusterLabels: {} # @schema description: Labels to apply to the cluster; type: object; additionalProperties: true
+clusterAnnotations: {} # @schema description: Annotations to apply to the cluster; type: object; additionalProperties: true
+
+# Hetzner cluster parameters
+
+additionalLabels: {} # @schema description: Additional set of labels to add to all the Hetzner resources; type: object; additionalProperties: false; patternProperties: {"^[a-zA-Z0-9._-]+$": {"type": "string"}}
+
+# NOTE: 
+# The CAPH currently does not provide an integrated way to select a pre-existing network.
+# Only way at the moment is to: 
+# - label a pre-existing network in Hetzner with `caph-cluster-<CLUSTER_NAME>=owned`
+# - set `network.enabled: true`
+#
+# See [Issue 762](https://github.com/syself/cluster-api-provider-hetzner/issues/762)
+# See [Issue 1472](https://github.com/syself/cluster-api-provider-hetzner/pull/1472)
+# See [PR 1472](https://github.com/syself/cluster-api-provider-hetzner/pull/1472)
+network: # @schema description: The network configuration; type: object; required: false
+  enabled: false # @schema description: Enable Hetzner virtual network; type: boolean; required: true
+  name: "" # @schema description: Network name; type: string; required: false
+  cidrBlock: "10.0.0.0/16" # @schema description: Network CIDR; type: string; required: false
+  subnetCidrBlock: "10.0.0.0/24" # @schema description: Subnet CIDR; type: string; required: false
+  networkZone: "eu-central" # @schema description: Network Zone; type: string; enum: ["eu-central","us-east","us-west","ap-southeast"]; required: false
+
+hcloudPlacementGroups:
+  - name: default-spread
+    type: spread
+
+controlPlaneReplicas: 3 # @schema description: The number of the control plane pods; type: number; minimum: 1
+controlPlaneRegions: [] # @schema description: Control plane regions (array of region identifiers); type: array;
+
+# Hetzner machines parameters
+nodepools: # @schema description: Node pool definitions; type: object
+  cloud-pool: # @schema description: HCloud nodepool; type: object
+    replicas: 2 # @schema description: Number of replicas for this nodepool; type: number; minimum: 0; required: true
+    autoscaling: # @schema description: Autoscaling config for this nodepool; type: object; required: false
+      enabled: false # @schema description: Enables autoscaling; type: boolean; default: false
+      minSize: 1 # @schema description: Minimum replicas when autoscaling enabled; type: number; minimum: 0
+      maxSize: 3 # @schema description: Maximum replicas when autoscaling enabled; type: number; minimum: 1
+    placementGroupName: "default-spread" # @schema description: Placement group name for HCloud server; type: string
+    machineType: "" # @schema description: The cloud instance type for HCloud server; type: string; required: true
+    imageName: "" # @schema description: The image name to provision HCloud server; type: string; required: true
+    publicNetwork: # @schema description: Specs about primary IP address of server. If both IPv4 and IPv6 are disabled, then the private network has to be enabled; type: object; required: false
+      enableIPv4: false # @schema description: Defines whether server has IPv4 address enabled. As Hetzner load balancers require an IPv4 address, this setting will be ignored and set to true if there is no private net; type: bool; required: true
+      enableIPv6: false # @schema description: Defines whether server has IPv6 address enabled; type: bool; required: false
+    healthcheck: # @schema description: Machine healthcheck configuration for this nodepool; type: object
+      enabled: true # @schema description: Enable node healthchecks for this nodepool; type: boolean; required: true
+      maxUnhealthy: "100%" # @schema description: Maximum allowed unhealthy nodes (percentage string, e.g. "100%"); type: string; required: true
+      nodeStartupTimeout: "10m" # @schema description: Duration to wait for a node to become Ready when booting (e.g. "10m"); type: string; required: false
+      remediationStrategy: # @schema description: Remediation strategy applied when node is deemed unhealthy; type: object
+        retryLimit: 1 # @schema description: Number of retries for remediation attempts; type: number; required: false
+        timeout: "180s" # @schema description: Timeout for each remediation attempt (e.g. "180s"); type: string; required: true
+        type: Reboot # @schema description: Type of remediation to perform; type: string; enum: [Reboot]; required: false
+
+  # example robot (bare-metal) nodepool:
+  # robot-pool: # @schema description: Robot nodepool; type: object
+  #   replicas: 0 # @schema description: Number of replicas for this nodepool; type: number; minimum: 0; required: true
+  #   bootstrap: # @schema description: Defines image for bm machine.; type: object; required: true
+  #     image: # @schema description: Defines image for bm machine. See below for details. type: object; required: true
+  #       name: "" # @schema description: The image name to provision robot server; type: string; required: false
+  #       url: "" # @schema description: Remote URL of image. Can be tar, tar.gz, tar.bz, tar.bz2, tar.xz, tgz, tbz, txz; type: string; required: false
+  #       path: "" # @schema description: Local path of a pre-installed image; type: string; required: false
+  #     swraid: # @schema description: Configure software raid; type: object; required: false
+  #       enabled: false # @schema description: Enables or disables software raid; type: boolean; required: false
+  #       level: 0 # @schema description: Defines the software raid levels. Only relevant if raid is enabled. Pick one of 0,1,5,6,10; type: integer; required: false
+  #     partitions: # @schema description: Partitions that should be created in installimage; type: array; required: true
+  #       - mount: "" # @schema description: Mount defines the mount path of the filesystem; type: string; required: true
+  #         fileSystem: "" # @schema description: Filesystem that should be used. Can be ext2, ext3, ext4, btrfs, reiserfs, xfs, swap, or the name of the LVM volume group, if the partition is a VG; type: string; required: true
+  #         size: "" # @schema description: Size of the partition. Use 'all' to use all remaining space of the drive. M/G/T can be used as unit specifications for MiB, GiB, TiB; type: string; required: true
+  #         logicalVolumeDefinitions: # @schema description: Defines the logical volume definitions that should be created; type: array; required: false
+  #           - vg: "" # @schema description: Defines the vg name; type: string; required: true
+  #             name: "" # @schema description: Defines the volume name; type: string; required: true
+  #             mount: "" # @schema description: Defines the mount path; type: string; required: true
+  #             fileSystem: "" # @schema description: Defines the file system; type: string; required: true
+  #             size: "" # @schema description: Defines size with unit M/G/T or MiB/GiB/TiB; type: string; required: true
+  #         btrfsDefinitions: # @schema description: Defines the btrfs sub-volume definitions that should be created; type: array; required: false
+  #           - volume: "" # @schema description: Defines the btrfs volume name; type: string; required: true
+  #             subvolume: "" # @schema description: Defines the btrfs sub-volume name; type: string; required: true
+  #             mount: "" # @schema description: Defines the btrfs mount path; type: string; required: true
+  #     postInstallScript: "" # @schema description: PostInstallScript that is used for commands that will be executed after installing image; type: string; required: false
+  #   ssh: # @schema description: SSH access configuration; type: object; required: true
+  #     secretRef: "" # @schema description: Reference to the secret where SSH key is stored; type: string; required: true
+  #     portAfterInstallImage: 22 # @schema description: PortAfterInstallImage specifies the port that can be used to reach the server via SSH after cloud init completed successfully; type: integer; required: false
+  #   hostSelector: # @schema description: Options to select hosts with; type: object; required: false
+  #     matchLabels: {} # @schema description: Specify labels as key-value pairs that should be there in host object to select it; type: object; required: false
+  #     matchExpressions: # @schema description: Requirements using Kubernetes MatchExpressions; type: array; required: false
+  #       - key: "role" # @schema description: Key of label that should be matched in host object; type: string; required: true
+  #         operator: "In" # @schema description: Selection operator; type: string; required: true
+  #         values: ["worker-node"] # @schema description: Values whose relation to the label value in the host machine is defined by the selection operator; type: array; items: string; required: true
+  #   healthcheck: # @schema description: Machine healthcheck configuration for this nodepool; type: object
+  #     enabled: true # @schema description: Enable node healthchecks for this nodepool; type: boolean; required: true
+  #     maxUnhealthy: "100%" # @schema description: Maximum allowed unhealthy nodes (percentage string, e.g. "100%"); type: string; required: true
+  #     nodeStartupTimeout: "10m" # @schema description: Duration to wait for a node to become Ready when booting (e.g. "10m"); type: string; required: false
+  #     remediationStrategy: # @schema description: Remediation strategy applied when node is deemed unhealthy; type: object
+  #       retryLimit: 1 # @schema description: Number of retries for remediation attempts; type: number; required: false
+  #       timeout: "180s" # @schema description: Timeout for each remediation attempt (e.g. "180s"); type: string; required: true
+  #       type: Reboot # @schema description: Type of remediation to perform; type: string; enum: [Reboot]; required: false
+
+skipCreatingHetznerSecretInWorkloadCluster: false # @schema description: Indicates whether the Hetzner secret should be created in the workload cluster. type: boolean; required: true
+
+hcloudSshKeys: # @schema description: HCloud SSH keys; type: array; minItems: 1; items: object
+  - name: "" # @schema description: ssh key name in HCloud; type: string; required: true
+    fingerprint: "" # @schema description: ssh key fingerprint in HCloud; type: string; required: false
+
+# K0smotron parameters
+k0smotron: # @schema description: K0smotron parameters; type: object
+  controllerPlaneFlags: [] # @schema description: ControlPlaneFlags allows to configure additional flags for k0s control plane and to override existing ones. The default flags are kept unless they are overriden explicitly. Flags with arguments must be specified as a single string, e.g. --some-flag=argument; type: array; items: string
+  service: # @schema description: The API service configuration; type: object
+    type: LoadBalancer # @schema description: An ingress methods for a service; type: string; enum: ClusterIP, NodePort, LoadBalancer; default: LoadBalancer
+    apiHost: "localhost" # @schema description: The LB apiHost of the controlplane: string; default: localhost
+    apiPort: 6443 # @schema description: The kubernetes API port. If empty k0smotron will pick it automatically; type: number; minimum: 1; maximum: 65535
+    konnectivityPort: 8132 # @schema description: The konnectivity port. If empty k0smotron will pick it automatically; type: number; minimum: 1; maximum: 65535
+  persistence: # @schema description: Persistence defines the persistence configuration. If empty k0smotron will use emptyDir as a volume (https://docs.k0smotron.io/stable/configuration/#persistence); type: object; required: false
+    type: emptyDir
+  addons: # @schema description: Configuration for installing any cluster addons as manifests or charts; type: object; required: false
+    manifests: [] # @schema description: Manifests allows to specify list of volumes with manifests to be deployed in the cluster. (https://docs.k0smotron.io/stable/resource-reference/controlplane.cluster.x-k8s.io-v1beta1/#k0smotroncontrolplanespecmanifestsindex); type: object; required: false
+    helm: # @schema description: Configuration of extension charts in k0s; type: object; required: false
+      repositories: [] # @schema description: k0s extension repositories (https://docs.k0sproject.io/stable/helm-charts/#repository-configuration); type: array; items: object
+      charts: [] # @schema description: k0s extension charts (https://docs.k0sproject.io/stable/helm-charts/#chart-configuration); type: array; items: object
+
+# K0s parameters
+k0s: # @schema description: K0s parameters; type: object
+  version: v1.32.6+k0s.0 # @schema description: K0s version; type: string
+  arch: amd64 # @schema description: K0s Download URL Arch; type: string; enum: amd64, arm64, arm; default: amd64
+  workerArgs: [] # @schema description: Args specifies extra arguments to be passed to k0s worker. See: https://docs.k0sproject.io/stable/worker-node-config/ See: https://docs.k0sproject.io/stable/cli/k0s_worker/; type: array; items: string
+  preStartCommands: [] # @schema description: PostStartCommands specifies commands to be run after starting k0s worker. See: https://docs.k0smotron.io/stable/resource-reference/bootstrap.cluster.x-k8s.io-v1beta1/#k0sworkerconfigtemplatespectemplatespec; type: array; items: string
+  postStartCommands: [] # @schema description: PostStartCommands specifies commands to be run after starting k0s worker. See: https://docs.k0smotron.io/stable/resource-reference/bootstrap.cluster.x-k8s.io-v1beta1/#k0sworkerconfigtemplatespectemplatespec; type: array; items: string
+  customUserDataRef: {} # @schema description: CustomUserDataRef is a reference to a secret or a configmap that contains the custom user data. Provided user-data will be merged with the one generated by k0smotron. Note that you may want to specify the merge type. See: https://cloudinit.readthedocs.io/en/latest/reference/merging.html; type: object; required: false
+  api: # @schema description: Kubernetes API server parameters; type: object
+    extraSans: [] # @schema description: Extra SANs to add; type: array; items: string;
+    extraArgs: {} # @schema description: Map of key-values (strings) for any extra arguments to pass down to Kubernetes api-server process; type: object; additionalProperties: true
+  network: # @schema description: Kubernetes cluster network configuration; type: object; additionalProperties: true
+    provider: calico # @schema description: Network provider to use; type: string; examples: [kuberouter, calico, custom]; minLength: 1
+    calico: # @schema description: Calico-specific configuration; type: object; additionalProperties: true
+      mode: vxlan # @schema description: Calico network mode; type: string; examples: [ipip, vxlan, never]; minLength: 1
+  

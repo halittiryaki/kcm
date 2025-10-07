@@ -1,0 +1,71 @@
+{{- $root := . -}}
+{{- range $name, $np := $root.Values.nodepools }}
+{{- if and $np.replicas (gt ($np.replicas | int) 0) }}
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: {{ include "machinedeployment.name" $root }}-{{ $name }}
+  annotations:
+    # Temporary fix to address https://github.com/k0sproject/k0smotron/issues/911
+    machineset.cluster.x-k8s.io/skip-preflight-checks: "ControlPlaneIsStable"
+    {{- if and $np.autoscaling $np.autoscaling.enabled }}
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "{{ default 1 $np.autoscaling.minSize }}"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "{{ default 1 $np.autoscaling.maxSize }}"
+    {{ end }}
+  labels:
+    nodepool: {{ include "machinedeployment.name" $root }}-{{ $name }}
+spec:
+  clusterName: {{ include "cluster.name" $root }}
+  replicas: {{ $np.replicas }}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ include "cluster.name" $root }}
+      nodepool: {{ $name }}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: {{ include "cluster.name" $root }}
+        nodepool: {{ $name }}
+    spec:
+      version: {{ (split "+" $root.Values.k0s.version)._0 }}
+      clusterName: {{ include "cluster.name" $root }}
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: K0sWorkerConfigTemplate
+          name: {{ include "k0sworkerconfigtemplate.name" $root }}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: {{ if $np.machineType }}HCloudMachineTemplate{{ else }}HetznerBareMetalMachineTemplate{{ end }}
+        name: {{ include "hetznermachinetemplate.worker.name" $root }}-{{ $name }}
+---
+{{- if and $np.healthcheck $np.healthcheck.enabled }}
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: {{ include "machinedeployment.name" $root }}-{{ $name }}-healthcheck
+spec:
+  clusterName: {{ include "cluster.name" $root }}
+  maxUnhealthy: {{ quote $np.healthcheck.maxUnhealthy }}
+  {{- if $np.healthcheck.nodeStartupTimeout }}
+  nodeStartupTimeout: {{ quote $np.healthcheck.nodeStartupTimeout }}
+  {{- end }}
+  remediationTemplate:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: {{ if $np.machineType }}HCloudRemediationTemplate{{ else }}HetznerBareMetalRemediationTemplate{{ end }}
+    name: {{ include "cluster.name" $root }}-{{ $name }}-remediation
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ include "cluster.name" $root }}
+      nodepool: {{ $name }}
+  unhealthyConditions:
+  - status: Unknown
+    timeout: {{ quote (default "180s" $np.healthcheck.remediationStrategy.timeout) }}
+    type: Ready
+  - status: "False"
+    timeout: {{ quote (default "180s" $np.healthcheck.remediationStrategy.timeout) }}
+    type: Ready
+---
+{{- end }}
+{{- end }}
+{{- end }}
