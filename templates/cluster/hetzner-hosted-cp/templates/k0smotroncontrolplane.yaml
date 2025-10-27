@@ -1,0 +1,99 @@
+{{- $global := .Values.global | default dict }}
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: K0smotronControlPlane
+metadata:
+  name: {{ include "k0smotroncontrolplane.name" . }}
+spec:
+  replicas: {{ .Values.controlPlaneReplicas }}
+  version: {{ .Values.k0s.version | replace "+" "-" }}
+  {{- with .Values.k0smotron.service }}
+  service:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if $global.registry }}
+  image: {{ $global.registry }}/k0sproject/k0s
+  etcd:
+    image: "{{ $global.registry }}/k0sproject/etcd:v3.5.13"
+  {{- end }}
+  {{- $mounts := .Values.k0smotron.mounts | default (list) }}
+  {{- if $global.registryCertSecret }}
+    {{- $registryMount := dict "path" "/usr/local/share/ca-certificates/registry" "secret" (dict "defaultMode" 420 "items" (list (dict "key" "ca.crt" "path" "ca.crt")) "secretName" $global.registryCertSecret) }}
+    {{- $mounts = append $mounts $registryMount }}
+  {{- end }}
+  {{- if gt (len $mounts) 0 }}
+  mounts:
+    {{- toYaml $mounts | nindent 4 }}
+  {{- end }}
+  controllerPlaneFlags:
+    - --enable-cloud-provider=true
+    - --debug=true
+    {{- range $arg := .Values.k0smotron.controllerPlaneFlags }}
+    - {{ toYaml $arg }}
+    {{- end }}
+  persistence:
+    {{- with .Values.k0smotron.persistence }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  manifests:
+    {{- with .Values.k0smotron.addons.manifests }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  k0sConfig:
+    apiVersion: k0s.k0sproject.io/v1beta1
+    kind: ClusterConfig
+    metadata:
+      name: k0s
+    spec:
+      api:
+      {{- with .Values.k0s.api.extraSans }}
+        sans:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.k0s.api.extraArgs }}
+        extraArgs:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.k0s.network }}
+      network: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $global.registry }}
+      images:
+        konnectivity:
+          image: "{{ $global.registry }}/k0sproject/apiserver-network-proxy-agent"
+        metricsserver:
+          image: "{{ $global.registry }}/metrics-server/metrics-server"
+        kubeproxy:
+          image: "{{ $global.registry }}/k0sproject/kube-proxy"
+        coredns:
+          image: "{{ $global.registry }}/k0sproject/coredns"
+        pause:
+          image: "{{ $global.registry }}/pause"
+        calico:
+          cni:
+            image: "{{ $global.registry }}/k0sproject/calico-cni"
+          node:
+            image: "{{ $global.registry }}/k0sproject/calico-node"
+          kubecontrollers:
+            image: "{{ $global.registry }}/k0sproject/calico-kube-controllers"
+      {{- end }}
+      extensions:
+        helm:
+          repositories:
+          {{- $repos := .Values.k0smotron.addons.helm.repositories | default nil }}
+          {{- if $repos }}
+            {{ toYaml $repos | nindent 12 }}
+          {{- end }}
+          {{- if not $global.registry }}
+            - name: mirantis
+              url: https://charts.mirantis.com
+          {{- else }}
+            - name: global-registry
+              url: oci://{{ regexReplaceAll "/.*" $global.registry "" }}
+              {{- if $global.registryCertSecret }}
+              caFile: /usr/local/share/ca-certificates/registry/ca.crt
+              {{- end }}
+          {{- end }}
+          charts:
+          {{- with .Values.k0smotron.addons.helm.charts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

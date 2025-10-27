@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A KCM provider cluster-api-provider-hetzner template",
+  "type": "object",
+  "properties": {
+    "configSecret": {
+      "description": "Configuration for the config secret",
+      "type": "object",
+      "properties": {
+        "create": {
+          "description": "Whether to create the secret",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "Name of the secret",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace for the secret",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "config": {
+      "description": "Hetzner credentials and robot rescue SSH keys",
+      "type": "object",
+      "properties": {
+        "hcloudToken": {
+          "type": "string"
+        },
+        "hetznerRobotUser": {
+          "type": "string"
+        },
+        "hetznerRobotPassword": {
+          "type": "string"
+        },
+        "robotRescueSshKeyName": {
+          "type": "string"
+        },
+        "robotRescueSshPrivateKey": {
+          "type": "string"
+        },
+        "robotRescueSshPublicKey": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "managerImage": {
+      "description": "Manager image",
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "repository"
+      ],
+      "additionalProperties": false
+    },
+    "manager": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "fetchConfigUrl": {
+      "description": "URL to fetch Hetzner configuration from",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

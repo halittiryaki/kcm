@@ -1,0 +1,1100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A KCM cluster hetzner-hosted-cp template",
+  "type": "object",
+  "required": [
+    "skipCreatingHetznerSecretInWorkloadCluster"
+  ],
+  "properties": {
+    "additionalLabels": {
+      "description": "Additional set of labels to add to all the Hetzner resources",
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9._-]+$": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "clusterAnnotations": {
+      "description": "Annotations to apply to the cluster",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "clusterLabels": {
+      "description": "Labels to apply to the cluster",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "clusterNetwork": {
+      "description": "The cluster network configuration",
+      "type": "object",
+      "properties": {
+        "apiServerPort": {
+          "description": "The port the API Server should bind to",
+          "type": "number",
+          "maximum": 65535,
+          "minimum": 1
+        },
+        "pods": {
+          "description": "The network ranges from which Pod networks are allocated",
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "description": "A list of CIDR blocks",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "services": {
+          "description": "The network ranges from which service VIPs are allocated",
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "description": "A list of CIDR blocks",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "clusterIdentity": {
+      "description": "The Hetzner credentials secret reference, auto-populated",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The Hetzner credentials secret name, auto-populated",
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "controlPlaneReplicas": {
+      "description": "The number of the control plane pods",
+      "type": "number",
+      "minimum": 1
+    },
+    "controlPlaneRegions": {
+      "description": "Control plane regions (array of region identifiers).",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "k0s": {
+      "description": "K0s parameters",
+      "type": "object",
+      "properties": {
+        "api": {
+          "description": "Kubernetes API server parameters",
+          "type": "object",
+          "properties": {
+            "extraSans": {
+              "description": "K0s parameters",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "extraArgs": {
+              "description": "Map of key-values (strings) for any extra arguments to pass down to Kubernetes api-server process",
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "arch": {
+          "description": "K0s Download URL Arch",
+          "default": "amd64",
+          "type": "string",
+          "enum": [
+            "amd64",
+            "arm64",
+            "arm"
+          ]
+        },
+        "network": {
+          "description": "Kubernetes cluster network configuration",
+          "type": "object",
+          "properties": {
+            "calico": {
+              "description": "Calico-specific configuration",
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "description": "Calico network mode",
+                  "examples": [
+                    "ipip",
+                    "vxlan",
+                    "never"
+                  ],
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": true
+            },
+            "provider": {
+              "description": "Network provider to use",
+              "examples": [
+                "kuberouter",
+                "calico",
+                "custom"
+              ],
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        },
+        "version": {
+          "description": "K0s version",
+          "type": "string"
+        },
+        "workerArgs": {
+          "description": "Args specifies extra arguments to be passed to k0s worker. See: https://docs.k0sproject.io/stable/worker-node-config/ See: https://docs.k0sproject.io/stable/cli/k0s_worker/",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "preStartCommands": {
+          "description": "PreStartCommands specifies commands to be run before starting k0s worker. See: https://docs.k0smotron.io/stable/resource-reference/bootstrap.cluster.x-k8s.io-v1beta1/#k0sworkerconfigtemplatespectemplatespec",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "postStartCommands": {
+          "description": "PostStartCommands specifies commands to be run after starting k0s worker. See: https://docs.k0smotron.io/stable/resource-reference/bootstrap.cluster.x-k8s.io-v1beta1/#k0sworkerconfigtemplatespectemplatespec",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "customUserDataRef": {
+          "description": "CustomUserDataRef is a reference to a secret or a configmap that contains the custom user data. Provided user-data will be merged with the one generated by k0smotron. Note that you may want to specify the merge type. See: https://cloudinit.readthedocs.io/en/latest/reference/merging.html",
+          "type": "object",
+          "properties": {
+            "configMapRef": {
+              "description": "ConfigMapRef is a reference to a configmap that contains the content",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name is the name of the source",
+                  "type": "string"
+                },
+                "key": {
+                  "description": "Key is the key in the source that contains the content",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "secretRef": {
+              "description": "SecretRef is a reference to a secret that contains the content",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name is the name of the source",
+                  "type": "string"
+                },
+                "key": {
+                  "description": "Key is the key in the source that contains the content",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "key"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "k0smotron": {
+      "description": "K0smotron parameters",
+      "type": "object",
+      "properties": {
+        "controllerPlaneFlags": {
+          "description": "ControlPlaneFlags allows to configure additional flags for k0s control plane and to override existing ones. The default flags are kept unless they are overriden explicitly. Flags with arguments must be specified as a single string, e.g. --some-flag=argument",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mounts": {
+          "description": "Mounts allows to specify list of volumes with any files to be mounted in the controlplane pod. K0smotron allows any kind of volume, but the recommendation is to use secrets and configmaps.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "service": {
+          "description": "The API service configuration",
+          "type": "object",
+          "properties": {
+            "apiPort": {
+              "description": "The kubernetes API port. If empty k0smotron will pick it automatically",
+              "type": "number",
+              "maximum": 65535,
+              "minimum": 1
+            },
+            "apiHost": {
+              "description": "The LB apiHost of the controlplane",
+              "type": "string",
+              "default": "localhost"
+            },
+            "konnectivityPort": {
+              "description": "The konnectivity port. If empty k0smotron will pick it automatically",
+              "type": "number",
+              "maximum": 65535,
+              "minimum": 1
+            },
+            "type": {
+              "description": "An ingress methods for a service",
+              "default": "LoadBalancer",
+              "type": "string",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer"
+              ]
+            }
+          }
+        },
+        "persistence": {
+          "description": "Persistence defines the persistence configuration. If empty k0smotron will use emptyDir as a volume (https://docs.k0smotron.io/stable/configuration/#persistence)",
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "description": "Persistence type. Defaults to emptyDir when omitted in values.",
+              "type": "string",
+              "enum": [
+                "emptyDir",
+                "hostPath",
+                "pvc"
+              ],
+              "default": "emptyDir"
+            },
+            "autoDeletePVCs": {
+              "description": "AutoDeletePVCs defines whether the PVC should be deleted when the cluster is deleted.",
+              "type": "boolean",
+              "default": false
+            },
+            "hostPath": {
+              "description": "HostPath defines the host path configuration. Will be used as is in case of .spec.persistence.type is hostPath.",
+              "type": "string"
+            },
+            "persistentVolumeClaim": {
+              "description": "PersistentVolumeClaim defines the PVC configuration. Will be used as is in case of .spec.persistence.type is pvc.",
+              "type": "object",
+              "properties": {
+                "apiVersion": {
+                  "description": "APIVersion defines the versioned schema of this representation of an object.",
+                  "type": "string"
+                },
+                "kind": {
+                  "description": "Kind is a string value representing the REST resource this object represents.",
+                  "type": "string"
+                },
+                "metadata": {
+                  "description": "Standard object's metadata.",
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "spec": {
+                  "description": "spec defines the desired characteristics of a volume requested by a pod author.",
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "addons": {
+          "description": "Addons configuration for k0smotron",
+          "type": "object",
+          "properties": {
+            "manifests": {
+              "description": "List of manifest objects to apply as addons",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "anyOf": [
+                  {
+                    "description": "ConfigMap projection manifest (each array item is an object keyed by 'configMap')",
+                    "properties": {
+                      "configMap": {
+                        "type": "object",
+                        "properties": {
+                          "defaultMode": {
+                            "description": "defaultMode is optional: mode bits used to set permissions on created files by default. YAML may use octal notation; JSON requires decimal. Accept either an integer or a string representation.",
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9]+$|^0[0-7]{3}$|^[0-7]{3,4}$"
+                              }
+                            ]
+                          },
+                          "items": {
+                            "description": "Optional list of keys from the ConfigMap to project into the volume with custom paths and optional per-file mode.",
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "key",
+                                "path"
+                              ],
+                              "properties": {
+                                "key": {
+                                  "description": "key is the key to project.",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "description": "path is the relative path of the file to map the key to. May not be absolute or contain '..'.",
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "description": "mode is optional: mode bits used to set permissions on this file. Accept integer or string octal/decimal.",
+                                  "anyOf": [
+                                    {
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$|^0[0-7]{3}$|^[0-7]{3,4}$"
+                                    }
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "name": {
+                            "description": "Name of the referent (optional).",
+                            "type": "string"
+                          },
+                          "optional": {
+                            "description": "Specify whether the ConfigMap or its keys must be defined (optional).",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "configMap"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "description": "Secret projection manifest (each array item is an object keyed by 'secret')",
+                    "properties": {
+                      "secret": {
+                        "type": "object",
+                        "properties": {
+                          "defaultMode": {
+                            "description": "defaultMode is optional: mode bits used to set permissions on created files by default. YAML may use octal notation; JSON requires decimal. Accept either an integer or a string representation.",
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9]+$|^0[0-7]{3}$|^[0-7]{3,4}$"
+                              }
+                            ]
+                          },
+                          "items": {
+                            "description": "Optional list of keys from the Secret to project into the volume with custom paths and optional per-file mode.",
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "key",
+                                "path"
+                              ],
+                              "properties": {
+                                "key": {
+                                  "description": "key is the key to project.",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "description": "path is the relative path of the file to map the key to. May not be absolute or contain '..'.",
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "description": "mode is optional: mode bits used to set permissions on this file. Accept integer or string octal/decimal.",
+                                  "anyOf": [
+                                    {
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$|^0[0-7]{3}$|^[0-7]{3,4}$"
+                                    }
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "secretName": {
+                            "description": "secretName is the name of the secret in the pod's namespace to use.",
+                            "type": "string"
+                          },
+                          "optional": {
+                            "description": "Specify whether the Secret or its keys must be defined (optional).",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "secret"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                ]
+              }
+            },
+            "helm": {
+              "description": "Helm related addons (repositories and charts)",
+              "type": "object",
+              "properties": {
+                "repositories": {
+                  "description": "Helm repositories to add",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "url"
+                    ],
+                    "properties": {
+                      "name": {
+                        "description": "The repository name",
+                        "type": "string"
+                      },
+                      "url": {
+                        "description": "The repository URL",
+                        "type": "string"
+                      },
+                      "insecure": {
+                        "description": "Whether to skip TLS certificate checks when connecting to the repository",
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "caFile": {
+                        "description": "CA bundle file to use when verifying HTTPS-enabled servers",
+                        "type": "string"
+                      },
+                      "certFile": {
+                        "description": "The TLS certificate file to use for HTTPS client authentication (not supported by OCI registries)",
+                        "type": "string"
+                      },
+                      "keyfile": {
+                        "description": "The TLS key file to use for HTTPS client authentication (not supported by OCI registries)",
+                        "type": "string"
+                      },
+                      "username": {
+                        "description": "Username for Basic HTTP authentication",
+                        "type": "string"
+                      },
+                      "password": {
+                        "description": "Password for Basic HTTP authentication",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "charts": {
+                  "description": "List of helm charts to deploy as addons",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "chartname"
+                    ],
+                    "properties": {
+                      "name": {
+                        "description": "Release name",
+                        "type": "string"
+                      },
+                      "chartname": {
+                        "description": "chartname in form \"repository/chartname\" or path to tgz file",
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "version to install",
+                        "type": "string"
+                      },
+                      "timeout": {
+                        "description": "timeout to wait for release install",
+                        "type": "string"
+                      },
+                      "values": {
+                        "description": "yaml as a string, custom chart values",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "description": "namespace to install chart into",
+                        "type": "string"
+                      },
+                      "forceUpgrade": {
+                        "description": "when set to false, disables the use of the \"--force\" flag when upgrading the chart",
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "order": {
+                        "description": "order to apply manifest. For equal values, alphanum ordering is used",
+                        "type": "number",
+                        "default": 0
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "network": {
+      "description": "The network configuration",
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "description": "Enable network customization",
+          "type": "boolean",
+          "default": false
+        },
+        "name": {
+          "description": "Network name",
+          "type": "string"
+        },
+        "cidrBlock": {
+          "description": "IP CIDR block",
+          "type": "string",
+          "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$"
+        },
+        "subnetCidrBlock": {
+          "description": "Subnet IP CIDR block",
+          "type": "string",
+          "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$"
+        },
+        "networkZone": {
+          "description": "Network zone",
+          "type": "string",
+          "enum": [
+            "eu-central",
+            "us-east",
+            "us-west",
+            "ap-southeast"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "hcloudPlacementGroups": {
+      "description": "HCloud placement groups definitions",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "description": "Placement group name",
+            "type": "string"
+          },
+          "type": {
+            "description": "Placement group type",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "skipCreatingHetznerSecretInWorkloadCluster": {
+      "description": "If true, do not create the Hetzner secret in the workload cluster",
+      "type": "boolean",
+      "default": false
+    },
+    "hcloudSshKeys": {
+      "description": "HCloud SSH keys",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "ssh key name in HCloud",
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "ssh key fingerprint in HCloud",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "nodepools": {
+      "description": "Node pool definitions",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "description": "HCloud (cloud) nodepool",
+            "type": "object",
+            "required": [
+              "replicas",
+              "machineType",
+              "imageName"
+            ],
+            "properties": {
+              "replicas": {
+                "description": "Number of replicas for this nodepool",
+                "type": "number",
+                "minimum": 0
+              },
+              "autoscaling": {
+                "description": "Autoscaling config for this nodepool",
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "description": "Enables autoscaling",
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "minSize": {
+                    "description": "Minimum replicas when autoscaling enabled",
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "maxSize": {
+                    "description": "Maximum replicas when autoscaling enabled",
+                    "type": "number",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "placementGroupName": {
+                "description": "Placement group name for HCloud server",
+                "type": "string"
+              },
+              "machineType": {
+                "description": "The cloud instance type for HCloud server",
+                "type": "string"
+              },
+              "imageName": {
+                "description": "The image name to provision HCloud server",
+                "type": "string"
+              },
+              "publicNetwork": {
+                "description": "Specs about primary IP address of server. If both IPv4 and IPv6 are disabled, then the private network has to be enabled",
+                "type": "object",
+                "required": [
+                  "enableIPv4"
+                ],
+                "properties": {
+                  "enableIPv4": {
+                    "description": "Defines whether server has IPv4 address enabled. As Hetzner load balancers require an IPv4 address, this setting will be ignored and set to true if there is no private net",
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "enableIPv6": {
+                    "description": "Defines whether server has IPv6 address enabled",
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "healthcheck": {
+                "description": "Machine healthcheck configuration for this nodepool",
+                "type": "object",
+                "required": [
+                  "enabled",
+                  "maxUnhealthy"
+                ],
+                "properties": {
+                  "enabled": {
+                    "description": "Enable node healthchecks for this nodepool",
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "maxUnhealthy": {
+                    "description": "Maximum allowed unhealthy nodes (percentage string, e.g. \"100%\")",
+                    "type": "string",
+                    "pattern": "^[0-9]{1,3}%$"
+                  },
+                  "nodeStartupTimeout": {
+                    "description": "Duration to wait for a node to become Ready when booting (e.g. \"10m\")",
+                    "type": "string"
+                  },
+                  "remediationStrategy": {
+                    "description": "Remediation strategy applied when node is deemed unhealthy",
+                    "type": "object",
+                    "required": [
+                      "timeout"
+                    ],
+                    "properties": {
+                      "retryLimit": {
+                        "description": "Number of retries for remediation attempts",
+                        "type": "number",
+                        "minimum": 0,
+                        "default": 1
+                      },
+                      "timeout": {
+                        "description": "Timeout for each remediation attempt (e.g. \"180s\")",
+                        "type": "string"
+                      },
+                      "type": {
+                        "description": "Type of remediation to perform",
+                        "type": "string",
+                        "enum": [
+                          "Reboot"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Robot (bare-metal) nodepool",
+            "type": "object",
+            "required": [
+              "replicas",
+              "bootstrap",
+              "ssh"
+            ],
+            "properties": {
+              "replicas": {
+                "description": "Number of replicas for this nodepool",
+                "type": "number",
+                "minimum": 0
+              },
+              "bootstrap": {
+                "description": "Defines image for bm machine.",
+                "type": "object",
+                "required": [
+                  "image",
+                  "partitions"
+                ],
+                "properties": {
+                  "image": {
+                    "description": "Defines image for bm machine. See below for details.",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "The image name to provision robot server",
+                        "type": "string"
+                      },
+                      "url": {
+                        "description": "Remote URL of image. Can be tar, tar.gz, tar.bz, tar.bz2, tar.xz, tgz, tbz, txz",
+                        "type": "string"
+                      },
+                      "path": {
+                        "description": "Local path of a pre-installed image",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "swraid": {
+                    "description": "Configure software raid",
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "description": "Enables or disables software raid",
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "level": {
+                        "description": "Defines the software raid levels. Only relevant if raid is enabled. Pick one of 0,1,5,6,10",
+                        "type": "integer",
+                        "enum": [
+                          0,
+                          1,
+                          5,
+                          6,
+                          10
+                        ],
+                        "default": 0
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "partitions": {
+                    "description": "Partitions that should be created in installimage",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "mount",
+                        "fileSystem",
+                        "size"
+                      ],
+                      "properties": {
+                        "mount": {
+                          "description": "Mount defines the mount path of the filesystem",
+                          "type": "string"
+                        },
+                        "fileSystem": {
+                          "description": "Filesystem that should be used. Can be ext2, ext3, ext4, btrfs, reiserfs, xfs, swap, or the name of the LVM volume group",
+                          "type": "string"
+                        },
+                        "size": {
+                          "description": "Size of the partition. Use 'all' to use all remaining space of the drive. M/G/T can be used as unit specifications for MiB, GiB, TiB",
+                          "type": "string"
+                        },
+                        "logicalVolumeDefinitions": {
+                          "description": "Defines the logical volume definitions that should be created",
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "vg",
+                              "name",
+                              "mount",
+                              "fileSystem",
+                              "size"
+                            ],
+                            "properties": {
+                              "vg": {
+                                "description": "Defines the vg name",
+                                "type": "string"
+                              },
+                              "name": {
+                                "description": "Defines the volume name",
+                                "type": "string"
+                              },
+                              "mount": {
+                                "description": "Defines the mount path",
+                                "type": "string"
+                              },
+                              "fileSystem": {
+                                "description": "Defines the file system",
+                                "type": "string"
+                              },
+                              "size": {
+                                "description": "Defines size with unit M/G/T or MiB/GiB/TiB",
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "btrfsDefinitions": {
+                          "description": "Defines the btrfs sub-volume definitions that should be created",
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "volume",
+                              "subvolume",
+                              "mount"
+                            ],
+                            "properties": {
+                              "volume": {
+                                "description": "Defines the btrfs volume name",
+                                "type": "string"
+                              },
+                              "subvolume": {
+                                "description": "Defines the btrfs sub-volume name",
+                                "type": "string"
+                              },
+                              "mount": {
+                                "description": "Defines the btrfs mount path",
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "postInstallScript": {
+                    "description": "PostInstallScript that is used for commands that will be executed after installing image",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "hostSelector": {
+                "description": "Host selector object - matchLabels and/or matchExpressions",
+                "type": "object",
+                "properties": {
+                  "matchLabels": {
+                    "description": "Specify labels as key-value pairs that should be there in host object to select it",
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "matchExpressions": {
+                    "description": "Requirements using Kubernetes MatchExpressions",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "description": "Key of label that should be matched in host object",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "Selection operator",
+                          "type": "string",
+                          "enum": [
+                            "In",
+                            "NotIn",
+                            "Exists",
+                            "DoesNotExist",
+                            "Gt",
+                            "Lt"
+                          ]
+                        },
+                        "values": {
+                          "description": "Values whose relation to the label value in the host machine is defined by the selection operator",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "ssh": {
+                "description": "SSH access configuration",
+                "type": "object",
+                "required": [
+                  "secretRef"
+                ],
+                "properties": {
+                  "secretRef": {
+                    "description": "Reference to the secret where SSH key is stored",
+                    "type": "string"
+                  },
+                  "portAfterInstallImage": {
+                    "description": "PortAfterInstallImage specifies the port that can be used to reach the server via SSH after cloud init completed successfully",
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "healthcheck": {
+                "description": "Machine healthcheck configuration for this nodepool",
+                "type": "object",
+                "required": [
+                  "enabled",
+                  "maxUnhealthy"
+                ],
+                "properties": {
+                  "enabled": {
+                    "description": "Enable node healthchecks for this nodepool",
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "maxUnhealthy": {
+                    "description": "Maximum allowed unhealthy nodes (percentage string, e.g. \"100%\")",
+                    "type": "string",
+                    "pattern": "^[0-9]{1,3}%$"
+                  },
+                  "nodeStartupTimeout": {
+                    "description": "Duration to wait for a node to become Ready when booting (e.g. \"10m\")",
+                    "type": "string"
+                  },
+                  "remediationStrategy": {
+                    "description": "Remediation strategy applied when node is deemed unhealthy",
+                    "type": "object",
+                    "required": [
+                      "timeout"
+                    ],
+                    "properties": {
+                      "retryLimit": {
+                        "description": "Number of retries for remediation attempts",
+                        "type": "number",
+                        "minimum": 0,
+                        "default": 1
+                      },
+                      "timeout": {
+                        "description": "Timeout for each remediation attempt (e.g. \"180s\")",
+                        "type": "string"
+                      },
+                      "type": {
+                        "description": "Type of remediation to perform",
+                        "type": "string",
+                        "enum": [
+                          "Reboot"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  }
+}

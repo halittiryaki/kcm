@@ -1,0 +1,48 @@
+{{- $root := . -}}
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: HetznerCluster
+metadata:
+  name: {{ include "cluster.name" $root }}
+  labels:
+  {{- with .Values.clusterLabels }}
+  {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.additionalLabels }}
+  {{ toYaml . | nindent 4 }}
+  {{- end }}
+  finalizers:
+    - k0rdent.mirantis.com/cleanup
+spec:
+  controlPlaneRegions: {{ .Values.controlPlaneRegions }}
+  controlPlaneLoadBalancer:
+    enabled: false
+  controlPlaneEndpoint:
+    host: {{ .Values.k0smotron.service.apiHost }}
+    port: {{ .Values.k0smotron.service.apiPort }}
+  hcloudNetwork:
+  {{- with .Values.network }}
+  {{ toYaml . | nindent 4 }}
+  {{- end }}
+  hcloudPlacementGroups:
+  {{- with .Values.hcloudPlacementGroups }}
+  {{ toYaml . | nindent 4 }}
+  {{- end }}
+  skipCreatingHetznerSecretInWorkloadCluster: {{ default false .Values.skipCreatingHetznerSecretInWorkloadCluster }}
+  hetznerSecretRef:
+    name: {{ $root.Values.clusterIdentity.name }}
+    key: 
+      hcloudToken: hcloudToken
+      hetznerRobotUser: hetznerRobotUser
+      hetznerRobotPassword: hetznerRobotPassword
+  sshKeys:
+    robotRescueSecretRef:
+      name: {{ $root.Values.clusterIdentity.name }}
+      key:
+        name: robotRescueSshKeyName
+        privateKey: robotRescueSshPrivateKey
+        publicKey: robotRescueSshPublicKey
+    hcloud:
+      {{- with .Values.hcloudSshKeys }}
+      {{ toYaml . | nindent 4 }}
+      {{- end }}
+---

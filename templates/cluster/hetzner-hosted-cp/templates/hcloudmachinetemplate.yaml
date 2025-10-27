@@ -1,0 +1,39 @@
+{{- $root := . -}}
+{{- range $name, $np := $root.Values.nodepools }}
+{{- if $np.machineType }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: HCloudMachineTemplate
+metadata:
+  name: {{ include "hetznermachinetemplate.worker.name" $root }}-{{ $name }}
+spec:
+  template:
+    spec:
+      imageName: {{ quote (default "" $np.imageName) }}
+      placementGroupName: {{ quote (default "" $np.placementGroupName) }}
+      type: {{ quote $np.machineType }}
+      {{- with $np.publicNetwork }}
+      publicNetwork:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      sshKeys:
+        {{- range $i, $key := $root.Values.hcloudSshKeys }}
+        - name: {{ quote (default "" $key.name) }}
+          fingerprint: {{ quote (default "" $key.fingerprint) }}
+        {{- end }}
+---
+{{- if and $np.healthcheck $np.healthcheck.enabled }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: HCloudRemediationTemplate
+metadata:
+  name: {{ include "cluster.name" $root }}-{{ $name }}-remediation
+spec:
+  template:
+    spec:
+      strategy:
+        retryLimit: {{ default (ternary 1 2 (ne $np.machineType nil)) $np.healthcheck.remediationStrategy.retryLimit }}
+        timeout: {{ quote (default "10m" $np.healthcheck.remediationStrategy.timeout) }}
+        type: {{ quote (default "Reboot" $np.healthcheck.remediationStrategy.type) }}
+---
+{{- end }}
+{{- end }}
+{{- end }}
